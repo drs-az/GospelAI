@@ -187,6 +187,103 @@
       transform: translateY(-1px);
     }
 
+    .share-cta {
+      margin-top: 32px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .btn-secondary {
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px solid rgba(99, 102, 241, 0.24);
+      color: var(--accent);
+      box-shadow: none;
+    }
+
+    .btn-secondary:hover {
+      border-color: rgba(99, 102, 241, 0.4);
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(15, 23, 42, 0.58);
+      z-index: 1000;
+    }
+
+    .modal-backdrop.active {
+      display: flex;
+    }
+
+    .share-modal {
+      width: min(420px, 100%);
+      background: var(--panel);
+      border-radius: 24px;
+      padding: 32px 28px;
+      position: relative;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+
+    .share-modal h2 {
+      margin-top: 0;
+      margin-bottom: 12px;
+      font-size: 24px;
+    }
+
+    .share-modal p {
+      color: var(--muted);
+      margin-top: 0;
+      margin-bottom: 20px;
+      font-size: 15px;
+    }
+
+    .share-qr {
+      width: 220px;
+      height: 220px;
+      margin: 0 auto 20px;
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.24);
+      padding: 12px;
+      background: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .share-qr img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .share-close {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 16px;
+      padding: 8px;
+    }
+
+    .share-feedback {
+      margin-top: 16px;
+      font-size: 14px;
+      color: var(--accent);
+      min-height: 20px;
+    }
+
+    body.modal-open {
+      overflow: hidden;
+    }
+
     .footer {
       margin-top: 36px;
       display: flex;
@@ -303,11 +400,39 @@
         </div>
       </div>
 
+      <div class="share-cta">
+        <button class="btn btn-secondary share-trigger" type="button">Share Gospel AI</button>
+      </div>
+
       <div class="footer">
         <span>© <span id="year"></span> The Gospels AI</span>
       </div>
     </section>
   </main>
+
+  <div
+    id="share-modal"
+    class="modal-backdrop"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="share-modal-title"
+    aria-hidden="true"
+  >
+    <div class="share-modal">
+      <button class="share-close" type="button" aria-label="Close sharing dialog">✕</button>
+      <h2 id="share-modal-title">Share Gospel AI</h2>
+      <p>Invite others to explore the wisdom of Jesus by sharing this link or scanning the QR code.</p>
+      <div class="share-qr">
+        <img
+          src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=https%3A%2F%2Fdrs-az.github.io%2FGospelAI"
+          alt="QR code linking to Gospel AI"
+          loading="lazy"
+        />
+      </div>
+      <button id="share-action" class="btn" type="button">Share Gospel AI</button>
+      <div id="share-feedback" class="share-feedback" role="status" aria-live="polite"></div>
+    </div>
+  </div>
 
   <script>
     (function () {
@@ -317,6 +442,14 @@
       const helper = document.getElementById("helper");
       const chips = document.querySelectorAll(".chip");
       const yearEl = document.getElementById("year");
+      const shareModalBackdrop = document.getElementById("share-modal");
+      const shareTrigger = document.querySelector(".share-trigger");
+      const shareCloseButton = document.querySelector(".share-close");
+      const shareActionButton = document.getElementById("share-action");
+      const shareFeedback = document.getElementById("share-feedback");
+      const shareUrl = "https://drs-az.github.io/GospelAI";
+      const shareText = "Check out Gospel AI to seek the wisdom of Jesus through Scripture.";
+
       yearEl.textContent = new Date().getFullYear();
 
       const params = new URLSearchParams(window.location.search);
@@ -354,6 +487,71 @@
           event.preventDefault();
           form.requestSubmit();
         }
+      });
+
+      const closeShareModal = () => {
+        if (!shareModalBackdrop.classList.contains("active")) {
+          return;
+        }
+        shareModalBackdrop.classList.remove("active");
+        shareModalBackdrop.setAttribute("aria-hidden", "true");
+        document.body.classList.remove("modal-open");
+        shareFeedback.textContent = "";
+      };
+
+      const openShareModal = () => {
+        shareModalBackdrop.classList.add("active");
+        shareModalBackdrop.setAttribute("aria-hidden", "false");
+        document.body.classList.add("modal-open");
+        shareActionButton.focus();
+      };
+
+      shareTrigger.addEventListener("click", openShareModal);
+      shareCloseButton.addEventListener("click", closeShareModal);
+
+      shareModalBackdrop.addEventListener("click", (event) => {
+        if (event.target === shareModalBackdrop) {
+          closeShareModal();
+        }
+      });
+
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          closeShareModal();
+        }
+      });
+
+      shareActionButton.addEventListener("click", async () => {
+        shareFeedback.textContent = "";
+        const sharePayload = {
+          title: "Gospel AI",
+          text: shareText,
+          url: shareUrl,
+        };
+
+        if (navigator.share) {
+          try {
+            await navigator.share(sharePayload);
+            shareFeedback.textContent = "Thanks for sharing Gospel AI!";
+          } catch (error) {
+            if (error && error.name !== "AbortError") {
+              shareFeedback.textContent = "Unable to launch sharing. Try again or copy the link.";
+            }
+          }
+          return;
+        }
+
+        if (navigator.clipboard) {
+          try {
+            await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
+            shareFeedback.textContent = "Link copied to your clipboard!";
+            return;
+          } catch (error) {
+            /* continue to fallback */
+          }
+        }
+
+        shareFeedback.textContent = `Share this link: ${shareUrl}`;
       });
 
       if ("serviceWorker" in navigator) {
