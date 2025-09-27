@@ -4,11 +4,11 @@
   "start_url": ".",
   "display": "standalone",
   "background_color": "#FFFFFF",
-  "theme_color": "#4f46e5",
+  "theme_color": "#FFFFFF",
   "description": "Seek the wisdom of Jesus from the Gospel with Gospel AI.",
   "icons": [
     {
-      "src": "logo-gospelai.png",
+      "src": "logo-app.png",
       "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "any maskable"
