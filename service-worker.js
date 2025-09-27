@@ -3,6 +3,7 @@ const OFFLINE_ASSETS = [
   "./",
   "index.html",
   "logo-gospelai.png",
+  "logo-app.png",
   "manifest.webmanifest"
 ];
 
