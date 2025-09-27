@@ -3,7 +3,7 @@
   "short_name": "Gospel AI",
   "start_url": ".",
   "display": "standalone",
-  "background_color": "#f6f7f9",
+  "background_color": "#FFFFFF",
   "theme_color": "#4f46e5",
   "description": "Seek the wisdom of Jesus from the Gospel with Gospel AI.",
   "icons": [
