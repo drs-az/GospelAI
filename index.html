@@ -242,6 +242,35 @@
       font-size: 15px;
     }
 
+    .install-modal {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .install-modal p {
+      margin-bottom: 8px;
+    }
+
+    .install-logo {
+      width: 100px;
+      height: 100px;
+      border-radius: 28px;
+      object-fit: cover;
+      box-shadow: 0 20px 40px rgba(79, 70, 229, 0.2);
+    }
+
+    .install-modal .btn {
+      width: 100%;
+    }
+
+    .install-status {
+      min-height: 24px;
+      font-size: 14px;
+      color: var(--accent);
+    }
+
     .share-qr {
       width: 220px;
       height: 220px;
@@ -411,6 +440,23 @@
   </main>
 
   <div
+    id="install-modal"
+    class="modal-backdrop"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="install-modal-title"
+    aria-hidden="true"
+  >
+    <div class="share-modal install-modal">
+      <img class="install-logo" src="logo-app.png" alt="Gospel AI app icon" />
+      <h2 id="install-modal-title">Install Gospel AI</h2>
+      <p>Install the Gospel AI app to keep Scripture-guided wisdom just a tap away.</p>
+      <button id="install-action" class="btn" type="button" disabled>Install Gospel AI</button>
+      <div id="install-status" class="install-status" role="status" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div
     id="share-modal"
     class="modal-backdrop"
     role="dialog"
@@ -447,8 +493,13 @@
       const shareCloseButton = document.querySelector(".share-close");
       const shareActionButton = document.getElementById("share-action");
       const shareFeedback = document.getElementById("share-feedback");
+      const installModalBackdrop = document.getElementById("install-modal");
+      const installActionButton = document.getElementById("install-action");
+      const installStatus = document.getElementById("install-status");
       const shareUrl = "https://drs-az.github.io/GospelAI";
       const shareText = "Check out Gospel AI to seek the wisdom of Jesus through Scripture.";
+      const installStorageKey = "gospelaiPwaInstalled";
+      let deferredInstallPrompt = null;
 
       yearEl.textContent = new Date().getFullYear();
 
@@ -489,17 +540,152 @@
         }
       });
 
+      const isInstallModalActive = () =>
+        installModalBackdrop && installModalBackdrop.classList.contains("active");
+
+      const hideInstallModal = () => {
+        if (!installModalBackdrop) {
+          return;
+        }
+        installModalBackdrop.classList.remove("active");
+        installModalBackdrop.setAttribute("aria-hidden", "true");
+        if (!shareModalBackdrop.classList.contains("active")) {
+          document.body.classList.remove("modal-open");
+        }
+        if (shareTrigger) {
+          shareTrigger.disabled = false;
+          shareTrigger.removeAttribute("aria-disabled");
+        }
+      };
+
+      const showInstallModal = () => {
+        if (!installModalBackdrop) {
+          return;
+        }
+        installModalBackdrop.classList.add("active");
+        installModalBackdrop.setAttribute("aria-hidden", "false");
+        document.body.classList.add("modal-open");
+        if (shareTrigger) {
+          shareTrigger.disabled = true;
+          shareTrigger.setAttribute("aria-disabled", "true");
+        }
+        if (installActionButton && !installActionButton.disabled) {
+          installActionButton.focus();
+        }
+      };
+
+      const markPwaInstalled = () => {
+        localStorage.setItem(installStorageKey, "true");
+        if (installActionButton) {
+          installActionButton.disabled = true;
+          installActionButton.textContent = "Installed";
+        }
+        if (installStatus) {
+          installStatus.textContent = "Gospel AI is installed. Enjoy!";
+        }
+        hideInstallModal();
+      };
+
+      const standaloneMedia = window.matchMedia("(display-mode: standalone)");
+      const alreadyInstalled =
+        localStorage.getItem(installStorageKey) === "true" ||
+        standaloneMedia.matches ||
+        window.navigator.standalone === true;
+
+      if (alreadyInstalled) {
+        localStorage.setItem(installStorageKey, "true");
+        hideInstallModal();
+      } else {
+        if (installStatus) {
+          installStatus.textContent =
+            "Install the Gospel AI PWA to continue. The install button will activate shortly if supported.";
+        }
+        showInstallModal();
+      }
+
+      const handleStandaloneChange = (event) => {
+        if (event.matches) {
+          markPwaInstalled();
+        }
+      };
+
+      if (standaloneMedia.addEventListener) {
+        standaloneMedia.addEventListener("change", handleStandaloneChange);
+      } else if (standaloneMedia.addListener) {
+        standaloneMedia.addListener(handleStandaloneChange);
+      }
+
+      window.addEventListener("appinstalled", markPwaInstalled);
+
+      window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+        if (installActionButton) {
+          installActionButton.disabled = false;
+          installActionButton.textContent = "Install Gospel AI";
+          if (isInstallModalActive()) {
+            installActionButton.focus();
+          }
+        }
+        if (installStatus) {
+          installStatus.textContent = "Tap install to add Gospel AI to your device.";
+        }
+      });
+
+      if (installActionButton) {
+        installActionButton.addEventListener("click", async () => {
+          if (!deferredInstallPrompt) {
+            if (installStatus) {
+              installStatus.textContent =
+                "The install option will be ready shortly. Please try again in a moment.";
+            }
+            return;
+          }
+
+          installActionButton.disabled = true;
+          installActionButton.textContent = "Installing…";
+          if (installStatus) {
+            installStatus.textContent = "";
+          }
+
+          deferredInstallPrompt.prompt();
+          const choice = await deferredInstallPrompt.userChoice;
+          deferredInstallPrompt = null;
+
+          if (choice.outcome !== "accepted") {
+            installActionButton.disabled = false;
+            installActionButton.textContent = "Install Gospel AI";
+            if (installStatus) {
+              installStatus.textContent = "Please complete the installation to continue.";
+            }
+            return;
+          }
+
+          if (installStatus) {
+            installStatus.textContent = "Finishing installation…";
+          }
+        });
+      }
+
       const closeShareModal = () => {
         if (!shareModalBackdrop.classList.contains("active")) {
           return;
         }
         shareModalBackdrop.classList.remove("active");
         shareModalBackdrop.setAttribute("aria-hidden", "true");
-        document.body.classList.remove("modal-open");
+        if (!isInstallModalActive()) {
+          document.body.classList.remove("modal-open");
+        }
         shareFeedback.textContent = "";
       };
 
       const openShareModal = () => {
+        if (isInstallModalActive()) {
+          if (installStatus) {
+            installStatus.textContent = "Please install Gospel AI to continue.";
+          }
+          return;
+        }
         shareModalBackdrop.classList.add("active");
         shareModalBackdrop.setAttribute("aria-hidden", "false");
         document.body.classList.add("modal-open");
@@ -516,7 +702,7 @@
       });
 
       document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") {
+        if (event.key === "Escape" && !isInstallModalActive()) {
           closeShareModal();
         }
       });
